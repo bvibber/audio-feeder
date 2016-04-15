@@ -5,8 +5,8 @@ The AudioFeeder class abstracts a buffered output pipe for uncompressed PCM
 audio in the browser, supporting both the standard W3C Web Audio API and a
 Flash-based fallback for IE 10/11.
 
-AudioFeeder was written for the ogv.js in-browser Ogg/WebM media player, and
-is suitable for use in custom audio and video playback.
+AudioFeeder was written for the [ogv.js in-browser Ogg/WebM media player](https://github.com/brion/ogv.js),
+and is suitable for use in custom audio and video playback.
 
 ## Copyright and license
 
@@ -15,6 +15,8 @@ is suitable for use in custom audio and video playback.
 
 ## Updates
 
+* ?? - ??
+ * Refactoring code paths and build process
 * 0.0.2 - 2016-03-27
  * Broken out from ogv.js, cleaning up to publish as npm module
 
@@ -40,9 +42,9 @@ to ensure that dynamicaudio.swf is also packaged along with your bundled
 JS output from browserify to support IE 10/11, and may need to manually
 set the base path in the options to the AudioFeeder constructor.
 
-## Installing with Browserify
+## Installing with Browserify or Webpack
 
-If bundling via Browserify, add to your npm dependencies:
+If bundling via Browserify or Webpack, add to your npm dependencies:
 
 ```
 npm install audio-feeder
@@ -56,8 +58,8 @@ var AudioFeeder = require('audio-feeder');
 
 Then follow the instructions in the 'Usage' section below. You will need
 to ensure that dynamicaudio.swf is also packaged along with your bundled
-JS output from browserify to support IE 10/11, and may need to manually
-set the base path in the options to the AudioFeeder constructor.
+JS output to support IE 10/11, and may need to manually set the base path
+in the options to the AudioFeeder constructor.
 
 ## Usage
 
@@ -164,8 +166,31 @@ output format for dynamically generated audio in Flash.
 
 ## Rebuilding Flash shim
 
-The Flash shim can be rebuilt from source using the Apache Flex SDK:
+The Flash shim can be rebuilt from source using the Apache Flex SDK.
+The Makefile in this project fetches a local copy of the SDK, which
+is not conveniently packaged.
 
 ```
-mxmlc -o dynamicaudio.swf -file-specs dynamicaudio.as
+# Rebuild dynamicaudio.swf, installing Flex SDK if necessary
+make
 ```
+
+Be warned that downloading libraries for the Apache Flex SDK may prompt
+you for permission at your terminal.
+
+```
+# To remove just the dynamicaudio.swf
+make clean
+
+# To remove the Flex SDK
+make distclean
+```
+
+### Build prerequisites
+
+The Makefile encapsulates fetching the Apache Flex SDK binaries, but you may
+need to first install a few things:
+
+* java
+* ant
+* curl
