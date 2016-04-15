@@ -2,13 +2,11 @@ var AudioFeeder;
 
 (function() {
 
-	if (WebAudioFeeder.isSupported()) {
-		AudioFeeder = WebAudioFeeder;
-	} else if (FlashAudioFeeder) {
-		AudioFeeder = FlashAudioFeeder;
-	} else {
-		AudioFeeder = StubAudioFeeder;
-	}
+	var BufferQueue = require('./buffer-queue.js'),
+		Backend = require('./backend.js'),
+		WebAudioBackend = require('./web-audio-backend.js'),
+		FlashBackend = require('./flash-backend.js'),
+		StubBackend = require('./stub-backend.js');
 
 	/**
 	 * Object that we can throw audio data into and have it drain out.
@@ -18,128 +16,182 @@ var AudioFeeder;
 	 *                          such as the Flash audio output shim
 	 *                 'audioContext' - AudioContext instance to use in
 	 *                          place of creating a default one
-	 *
-	 * @throws Error if browser is missing required support
 	 */
 	AudioFeeder = function(options) {
-		var self = this;
 		options = options || {};
 
-		var bufferSize = this.bufferSize = 4096,
-			channels = 0, // call init()!
-			rate = 0; // call init()!
+		this.rate = 0; // pending init
+		this.channels = 0; // pending init
+		this.muted = false;
 
-		// Always create stereo output. For iOS we have to set this stuff up
-		// before we've actually gotten the info from the codec because we
-		// must initialize from a UI event. Bah!
-		var outputChannels = 2;
+		this._backend = null; // AudioBackend instance, after init...
 
-		var buffers = [],
-			context,
-			node,
-			pendingBuffer = freshBuffer(),
-			pendingPos = 0,
-			muted = false,
-			queuedTime = 0,
-			playbackTimeAtBufferTail = -1,
-			targetRate,
-			dropped = 0,
-			delayedTime = 0;
-
-		/**
-		 * Start setting up output with the given channel count and sample rate.
-		 *
-		 * @param numChannels: Integer
-		 * @param sampleRate: Integer
-		 *
-		 * @todo merge into constructor?
-		 */
-		this.init = function(numChannels, sampleRate) {
-			rate = sampleRate;
-			channels = numChannels;
-		};
-
-		/**
-		 * Buffer data
-		 * @param samplesPerChannel: Array of Float32Arrays
-		 *
-		 * @todo throw if data invalid or uneven
-		 */
-		this.bufferData = function(samplesPerChannel) {
-		};
-
-		/**
-		 * Get an object with information about the current playback state.
-		 *
-		 * @todo cleanup names and units
-		 *
-		 * @return {
-		 *   playbackPosition: {number} seconds, with a system-provided base time
-		 *   samplesQueued: {int}
-		 *   dropped: {int}
-		 * }
-		 */
-		this.getPlaybackState = function() {
-		};
-
-		/**
-		 * @todo replace with volume property
-		 */
-		this.mute = function() {
-			this.muted = muted = true;
-		};
-
-		/**
-		 * @todo replace with volume property
-		 */
-		this.unmute = function() {
-			this.muted = muted = false;
-		};
-
-		/**
-		 * Close out the audio channel. The AudioFeeder instance will no
-		 * longer be usable after closing.
-		 *
-		 * @todo close out the AudioContext if no longer needed
-		 * @todo make the instance respond more consistently once closed
-		 */
-		this.close = function() {
-		};
-
-		/**
-		 * Checks if audio system is ready and calls the callback when ready
-		 * to begin playback.
-		 *
-		 * This will wait for the Flash shim to load on IE 10/11; waiting
-		 * is not required when using native Web Audio but you should use
-		 * this callback to support older browsers.
-		 */
-		this.waitUntilReady = function(callback) {
-		};
-
-		/**
-		 * Start/continue playback as soon as possible.
-		 *
-		 * You should buffer some audio ahead of time to avoid immediately
-		 * running into starvation.
-		 */
-		this.start = function() {
-		};
-
-		/**
-		 * Stop/pause playback as soon as possible.
-		 *
-		 * Audio that has been buffered but not yet sent to the device will
-		 * remain buffered, and can be continued with another call to start().
-		 */
-		this.stop = function() {
-		};
-
-		/**
-		 * A callback when we find we're out of buffered data.
-		 */
-		this.onstarved = null;
+		this._queuedTime = 0;
 	};
+
+	/**
+	 * Start setting up output with the given channel count and sample rate.
+	 *
+	 * @param numChannels: Integer
+	 * @param sampleRate: Integer
+	 *
+	 * @todo merge into constructor?
+	 */
+	AudioFeeder.prototype.init = function(numChannels, sampleRate) {
+		this.channels = numChannels;
+		this.rate = sampleRate;
+
+		if (WebAudioBackend.isSupported()) {
+			this._backend = new WebAudioBackend(numChannels, sampleRate, options);
+		} else if (FlashBackend.isSupported()) {
+			this._backend = new FlashBackend(numChannels, sampleRate, options);
+		} else {
+			this._backend = new StubBackend(numChannels, sampleRate, options);
+		}
+	};
+
+	/**
+	 * Resample a buffer from the input rate/channel count to the output.
+	 *
+	 * This is horribly naive and wrong.
+	 * Replace me with a better algo!
+	 *
+	 * @param samples: Array of Float32Arrays for each channel
+	 * @param return Array of Float32Arrays for each channel
+	 */
+	AudioFeeder.prototype._resample = function(samples) {
+		var rate = this.rate,
+			channels = this.channels,
+			targetRate = this._backend.rate,
+			targetChannels = this._backend.channels;
+
+		if (rate == targetRate && channels == targetChannels) {
+			return samples;
+		} else {
+			var newSamples = [];
+			for (var channel = 0; channel < targetChannels; channel++) {
+				var inputChannel = channel;
+				if (channel >= channels) {
+					// Flash forces output to stereo; if input is mono, dupe the first channel
+					inputChannel = 0;
+				}
+				var input = samples[inputChannel],
+					output = new Float32Array(Math.round(input.length * targetRate / rate));
+				for (var i = 0; i < output.length; i++) {
+					output[i] = input[(i * rate / targetRate) | 0];
+				}
+				newSamples.push(output);
+			}
+			return newSamples;
+		}
+	};
+
+	/**
+	 * Buffer data
+	 * @param sampleData: Array of Float32Arrays for each channel
+	 *
+	 * @todo throw if data invalid or uneven
+	 */
+	AudioFeeder.prototype.bufferData = function(sampleData) {
+		if (this._backend) {
+			var samples = this._resample(samplesData);
+			this._backend.appendBuffer(samples);
+		}
+	};
+
+	/**
+	 * Get an object with information about the current playback state.
+	 *
+	 * @todo cleanup names and units
+	 *
+	 * @return {
+	 *   playbackPosition: {number} seconds, with a system-provided base time
+	 *   samplesQueued: {int}
+	 *   dropped: {int}
+	 * }
+	 */
+	AudioFeeder.prototype.getPlaybackState = function() {
+		return this._backend.getPlaybackState();
+	};
+
+	/**
+	 * @todo replace with volume property
+	 */
+	AudioFeeder.prototype.mute = function() {
+		this.muted = muted = true;
+		this._backend.mute();
+	};
+
+	/**
+	 * @todo replace with volume property
+	 */
+	AudioFeeder.prototype.unmute = function() {
+		this.muted = muted = false;
+		this._backend.unmute();
+	};
+
+	/**
+	 * Close out the audio channel. The AudioFeeder instance will no
+	 * longer be usable after closing.
+	 *
+	 * @todo close out the AudioContext if no longer needed
+	 * @todo make the instance respond more consistently once closed
+	 */
+	AudioFeeder.prototype.close = function() {
+		if (this._backend) {
+			this._backend.close();
+			this._backend = null;
+		}
+	};
+
+	/**
+	 * Checks if audio system is ready and calls the callback when ready
+	 * to begin playback.
+	 *
+	 * This will wait for the Flash shim to load on IE 10/11; waiting
+	 * is not required when using native Web Audio but you should use
+	 * this callback to support older browsers.
+	 */
+	AudioFeeder.prototype.waitUntilReady = function(callback) {
+		if (this._backend) {
+			this._backend.waitUntilReady(callback);
+		} else {
+			throw 'Invalid state: AudioFeeder cannot waitUntilReady before init';
+		}
+	};
+
+	/**
+	 * Start/continue playback as soon as possible.
+	 *
+	 * You should buffer some audio ahead of time to avoid immediately
+	 * running into starvation.
+	 */
+	AudioFeeder.prototype.start = function() {
+		if (this._backend) {
+			this._backend.start();
+		} else {
+			throw 'Invalid state: AudioFeeder cannot start before init';
+		}
+	};
+
+	/**
+	 * Stop/pause playback as soon as possible.
+	 *
+	 * Audio that has been buffered but not yet sent to the device will
+	 * remain buffered, and can be continued with another call to start().
+	 */
+	AudioFeeder.prototype.stop = function() {
+		if (this._backend) {
+			this._backend.stop();
+		} else {
+			throw 'Invalid state: AudioFeeder cannot stop before init';
+		}
+	};
+
+	/**
+	 * A callback when we find we're out of buffered data.
+	 */
+	AudioFeeder.prototype.onstarved = null;
 
 	/**
 	 * Is the AudioFeeder class supported in this browser?
@@ -172,7 +224,7 @@ var AudioFeeder;
 
 })();
 
-// For browserify
+// For browserify & webpack
 if (typeof module === 'object' && typeof module.exports === 'object') {
 	module.exports = AudioFeeder;
 }

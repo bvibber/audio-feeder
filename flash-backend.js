@@ -1,17 +1,14 @@
 (function() {
 
-  function FlashAudioFeeder(options) {
-    BaseAudioFeeder.apply(this, options);
-  }
-  FlashAudioFeeder.prototype = Object.create(BaseAudioFeeder.prototype);
-
-  FlashAudioFeeder.prototype.init = function(numChannels, sampleRate) {
-    AudioFeederBase.prototype.init.apply(this, numChannels, sampleRate);
-    this._targetRate = this.targetRate = 44100;
+  var FlashBackend = function(numChannels, sampleRate, options) {
+    // Flash audio is hardcoded to stereo 44.1 kHz
+    this.rate = 44100;
+    this.channels = Math.min(numChannels | 0, 2);
 
     var flashOptions = {};
     if (typeof this._options.base === 'string') {
-      flashOptions.swf = this._options.base + '/dynamicaudio.swf?version=' + OGVVersion;
+      // @fixme replace the version string with an auto-updateable one
+      flashOptions.swf = this._options.base + '/dynamicaudio.swf?version=0.2';
     }
     this._flashaudio = new DynamicAudio(flashOptions);
     this._flashBuffer = '';
@@ -22,14 +19,14 @@
   };
 
   /**
-   * Resampling, scaling and reordering for the Flash fallback.
-   * The Flash fallback expects 44.1 kHz, stereo
-   * Resampling: This is horribly naive and wrong.
-   * TODO: Replace me with a better algo!
+   * Scaling and reordering of output for the Flash fallback.
+   * Input data is pre-resampled to the correct sample rate.
+   * @todo handle input with higher channel counts better
+   * @todo try sending floats to flash without losing precision?
    */
-  FlashAudioFeeder.prototype._resampleFlash = function(samples) {
-  	var sampleincr = this.rate / 44100;
-  	var samplecount = (samples[0].length * (44100 / this.rate)) | 0;
+  FlashBackend.prototype._resampleFlash = function(samples) {
+  	var sampleincr = 1;
+  	var samplecount = samples[0].length;
   	var newSamples = new Int16Array(samplecount * 2);
   	var chanLeft = samples[0];
   	var chanRight = this.channels > 1 ? samples[1] : chanLeft;
@@ -56,21 +53,23 @@
     var digits = "",
       len = samples.length;
     for (var i = 0; i < len; i++) {
-      // Note that in IE 11 strong concatenation is twice as fast as
+      // Note that in IE 11 string concatenation is twice as fast as
       // the traditional make-an-array-and-join here.
       digits += hexBytes[samples[i]];
     }
     return digits;
   }
 
-  FlashAudioFeeder.prototype.flushFlashBuffer = function() {
+  FlashBackend.prototype.flushFlashBuffer = function() {
     var chunk = this._flashBuffer,
       flashElement = this._flashaudio.flashElement;
+
+    this._flashBuffer = '';
+    this._flushTimeout = null;
+
     this.waitUntilReady(function() {
       flashElement.write(chunk);
     });
-    this._flashBuffer = '';
-    this._flushTimeout = null;
   };
 
   this.bufferData = function(samplesPerChannel) {
@@ -87,7 +86,7 @@
     }
   };
 
-  FlashAudioFeeder.prototype.getPlaybackState = function() {
+  FlashBackend.prototype.getPlaybackState = function() {
     var flashElement = this._flashaudio.flashElement;
     if (flashElement.write) {
       var now = Date.now(),
@@ -119,7 +118,7 @@
     }
   };
 
-  FlashAudioFeeder.prototype.close = function() {
+  FlashBackend.prototype.close = function() {
     this.stop();
 
     var wrapper = this._flashaudio.flashWrapper;
@@ -127,7 +126,12 @@
     this._flashaudio = null;
   };
 
-  FlashAudioFeeder.prototype.waitUntilReady = function(callback) {
+  /**
+   * Wait until the backend is ready to start, then call the callback.
+   *
+   * @fixme handle fail case?
+   */
+  FlashBackend.prototype.waitUntilReady = function(callback) {
     var self = this,
       times = 0,
       maxTimes = 100;
@@ -152,18 +156,15 @@
     }
   };
 
-  FlashAudioFeeder.prototype.start = function() {
+  FlashBackend.prototype.start = function() {
     this.flashaudio.flashElement.start();
   };
 
-  FlashAudioFeeder.prototype.stop = function() {
+  FlashBackend.prototype.stop = function() {
     this.flashaudio.flashElement.stop();
   };
 
-  FlashAudioFeeder.isSupported = function() {
-    if (!BaseAudioFeeder.isSupported()) {
-      return false;
-    }
+  FlashBackend.isSupported = function() {
 		if (navigator.userAgent.indexOf('Trident') !== -1) {
 			// We only do the ActiveX test because we only need Flash in
 			// Internet Explorer 10/11. Other browsers use Web Audio directly
@@ -178,10 +179,6 @@
 		}
 		return false;
   };
-
-  FlashAudioFeeder.initSharedAudioContext = function() {
-    // nothing to do
-	};
 
 	/** Flash fallback **/
 
@@ -268,4 +265,5 @@
 		},
 	};
 
+  module.exports = FlashBackend;
 })();

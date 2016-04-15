@@ -129,17 +129,17 @@ retrieved from the getPlaybackState() method:
 
 ```
 {
-  playbackPosition: Float /* seconds */,
-  samplesQueued: Float /* samples, approx */,
+  playbackPosition: Float /* seconds of sample data that have played back so far */,
+  samplesQueued: Float /* samples remaining before the buffer empties out, approximate */,
   dropped: Integer /* count of buffer underrun events */,
-  delayed: Float /* seconds */
+  delayed: Float /* total seconds of silence played to cover underruns */
 }
 ```
 
 Warning: this structure may change before 1.0.
 
-playbackPosition tracks the time via actual samples output, so will correct for
-drops and underruns and is suitable for use in scheduling output of synchronized
+playbackPosition tracks the time via actual samples output, corrected for drops
+and underruns. This value is suitable for use in scheduling output of synchronized
 video frames.
 
 ## Events
@@ -151,6 +151,7 @@ Todo:
 * add events for beginning of playback?
 * add event for reaching a threshold near starvation
 * add event for scheduled end of playback
+* fix event callback with Flash backend
 
 ## Flash and Internet Explorer 10/11
 
@@ -170,13 +171,20 @@ The Flash shim can be rebuilt from source using the Apache Flex SDK.
 The Makefile in this project fetches a local copy of the SDK, which
 is not conveniently packaged.
 
+Build prerequisites:
+
+* bash / make / etc
+* java
+* ant
+* curl
+
 ```
 # Rebuild dynamicaudio.swf, installing Flex SDK if necessary
 make
 ```
 
 Be warned that downloading libraries for the Apache Flex SDK may prompt
-you for permission at your terminal.
+you for permission at your terminal!
 
 ```
 # To remove just the dynamicaudio.swf
@@ -185,12 +193,3 @@ make clean
 # To remove the Flex SDK
 make distclean
 ```
-
-### Build prerequisites
-
-The Makefile encapsulates fetching the Apache Flex SDK binaries, but you may
-need to first install a few things:
-
-* java
-* ant
-* curl
