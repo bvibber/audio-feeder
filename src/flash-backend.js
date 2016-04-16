@@ -46,6 +46,13 @@
   FlashBackend.prototype.channels = 2;
 
   /**
+   * Buffer size hint. Fake for now!
+   * @type {number}
+   * @readonly
+   */
+  FlashBackend.prototype.bufferSize = 4096;
+
+  /**
    * Scaling and reordering of output for the Flash fallback.
    * Input data must be pre-resampled to the correct sample rate.
    *
@@ -136,8 +143,7 @@
    * @return {PlaybackState} - info about current playback state
    */
   FlashBackend.prototype.getPlaybackState = function() {
-    var flashElement = this._flashaudio.flashElement;
-    if (flashElement.write) {
+    if (this._flashaudio && this._flashaudio.flashElement && this._flashaudio.flashElement.write) {
       var now = Date.now(),
         delta = now - this._cachedFlashTime,
         state;
@@ -145,12 +151,12 @@
         var cachedFlashState = this._cachedFlashState;
         state = {
           playbackPosition: cachedFlashState.playbackPosition + delta / 1000,
-          samplesQueued: cachedFlashState.samplesQueued - delta * this._targetRate / 1000,
+          samplesQueued: cachedFlashState.samplesQueued - Math.max(0, Math.round(delta * this.rate / 1000)),
           dropped: cachedFlashState.dropped,
           delayed: cachedFlashState.delayed
         };
       } else {
-        state = flashElement.getPlaybackState();
+        state = this._flashaudio.flashElement.getPlaybackState();
         this._cachedFlashState = state;
         this._cachedFlashTime = now;
       }
@@ -183,7 +189,6 @@
         if (self._flashaudio && self._flashaudio.flashElement.write) {
           callback();
         } else if (times > maxTimes) {
-          console.log("Failed to initialize Flash audio shim");
           self.close();
           callback();
         } else {

@@ -63,8 +63,20 @@
 	 *
 	 * @type {number}
 	 * @readonly
+	 * @see AudioFeeder#targetRate
 	 */
 	AudioFeeder.prototype.rate = 0;
+
+	/**
+	 * Actual output sample rate in Hz, as provided by the backend.
+	 * This may differ from the rate requested, in which case input data
+	 * will be resampled automatically.
+	 *
+	 * @type {number}
+	 * @readonly
+	 * @see AudioFeeder#rate
+	 */
+	AudioFeeder.prototype.targetRate = 0;
 
 	/**
 	 * Number of output channels, as requested by the caller in {@link AudioFeeder#init}.
@@ -91,6 +103,13 @@
 	AudioFeeder.prototype.muted = false;
 
 	/**
+	 * Size of output buffers in samples, as a hint for latency/scheduling
+	 * @type {number}
+	 * @readonly
+	 */
+	AudioFeeder.prototype.bufferSize = 0;
+
+	/**
 	 * Start setting up for output with the given channel count and sample rate.
 	 * Audio data you provide will be resampled if necessary to whatever the
 	 * backend actually supports.
@@ -111,6 +130,9 @@
 		} else {
 			throw 'No supported backend';
 		}
+
+		this.targetRate = this._backend.rate;
+		this.bufferSize = this._backend.bufferSize;
 	};
 
 	/**
