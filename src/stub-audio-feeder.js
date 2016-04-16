@@ -1,17 +1,20 @@
 (function() {
 
-  function StubAudioFeeder(options) {
-    throw new Error("No supported audio output on this system");
+  function StubAudioFeeder(numChannels, sampleRate, options) {
+    this.channels = numChannels;
+    this.rate = sampleRate;
   }
 
-  StubAudioFeeder.prototype = Object.create(BaseAudioFeeder.prototype);
-
   StubAudioFeeder.isSupported = function() {
-    return false;
+    // always works!
+    return true;
   };
 
   StubAudioFeeder.initSharedAudioContext = function() {
     // nothing to do
 	};
 
+  StubAudioFeeder.appendBuffer = function(buffer) {
+    // no-op for now
+  }
 })();

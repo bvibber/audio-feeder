@@ -59,7 +59,7 @@ BufferQueue.prototype.validate = function(buffer) {
     } else if (channelData.length !== sampleCount) {
       throw 'Channel data not of matching length';
     }
-  });
+  }
 };
 
 /**
@@ -86,6 +86,9 @@ BufferQueue.prototype.shift = function(maxSamples) {
     split = false,
     splitPoint = 0,
     splitBuffer = null,
+    a = null,
+    b = null,
+    inputData = null,
     i = 0;
 
   while (output.length < sampleCount) {
@@ -117,7 +120,7 @@ BufferQueue.prototype.shift = function(maxSamples) {
     pos += inputSamples;
   }
 
-  return pendingBuffer;
+  return output;
 };
 
 module.exports = BufferQueue;

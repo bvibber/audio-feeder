@@ -12,7 +12,6 @@
   function WebAudioBackend(numChannels, sampleRate, options) {
     var context = options.audioContext || WebAudioBackend.initSharedAudioContext();
 
-    this._audioFeeder = audioFeeder;
     this._context = context;
 
     this.rate = context.sampleRate;
@@ -21,13 +20,16 @@
 
     this._bufferQueue = new BufferQueue(this.channels);
     this._playbackTimeAtBufferTail = context.currentTime;
+    this._queuedTime = 0;
+    this._delayedTime = 0;
+    this._dropped = 0;
 
     // @todo support new audio worker mode too
     if (context.createScriptProcessor) {
-      this._node = context.createScriptProcessor(bufferSize, 0, this.channels);
+      this._node = context.createScriptProcessor(this.bufferSize, 0, this.channels);
     } else if (context.createJavaScriptNode) {
       // In older Safari versions
-      this._node = context.createJavaScriptNode(bufferSize, 0, this.channels);
+      this._node = context.createJavaScriptNode(this.bufferSize, 0, this.channels);
     } else {
       throw new Error("Bad version of web audio API?");
     }
@@ -42,13 +44,13 @@
       playbackTime = event.playbackTime;
     } else {
       // Safari 6.1 hack
-      playbackTime = context.currentTime + (this.bufferSize / this.rate);
+      playbackTime = this._context.currentTime + (this.bufferSize / this.rate);
     }
 
     var expectedTime = this._playbackTimeAtBufferTail;
     if (expectedTime < playbackTime) {
       // we may have lost some time while something ran too slow
-      delayedTime += (playbackTime - expectedTime);
+      this._delayedTime += (playbackTime - expectedTime);
     }
 
     if (this._bufferQueue.samplesQueued() < this.bufferSize) {
@@ -66,7 +68,7 @@
     if (this._bufferQueue.samplesQueued() < this.bufferSize) {
       for (channel = 0; channel < this.channels; channel++) {
         output = event.outputBuffer.getChannelData(channel);
-        for (i = 0; i < bufferSize; i++) {
+        for (i = 0; i < this.bufferSize; i++) {
           output[i] = 0;
         }
       }
@@ -137,7 +139,7 @@
   WebAudioBackend.prototype.start = function() {
     this._node.onaudioprocess = this._audioProcess.bind(this);
     this._node.connect(this._context.destination);
-    playbackTimeAtBufferTail = this._context.currentTime;
+    this._playbackTimeAtBufferTail = this._context.currentTime;
   };
 
   WebAudioBackend.prototype.stop = function() {

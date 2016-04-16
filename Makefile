@@ -14,20 +14,20 @@ PLAYERGLOBAL_BASE:=$(FLEXSDK_DIR)/frameworks/libs/player
 PLAYERGLOBAL_DIR:=$(PLAYERGLOBAL_BASE)/11.1
 PLAYERGLOBAL_URL:=http://fpdownload.macromedia.com/get/flashplayer/updaters/11/playerglobal11_1.swc
 
-swf : dynamicaudio.swf
+swf : assets/dynamicaudio.swf
 
 clean :
-	rm -f dynamicaudio.swf
+	rm -f assets/dynamicaudio.swf
 
 distclean :
 	rm -f apache-flex-sdk-*-bin.tar.gz
 	rm -rf apache-flex-sdk-*-bin
 	rm -f flashplayer-libs
 
-dynamicaudio.swf : dynamicaudio.as flexsdk
+assets/dynamicaudio.swf : src/dynamicaudio.as flexsdk
 	FLEX_HOME="$(HERE)/$(FLEXSDK_DIR)" \
 	PLAYERGLOBAL_HOME="$(HERE)/$(PLAYERGLOBAL_BASE)" \
-	$(FLEXSDK_DIR)/bin/mxmlc -o dynamicaudio.swf -file-specs dynamicaudio.as
+	$(FLEXSDK_DIR)/bin/mxmlc -o assets/dynamicaudio.swf -file-specs src/dynamicaudio.as
 
 flexsdk : flexsdk-base flexsdk-libs flexsdk-playerglobal
 

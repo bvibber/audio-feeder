@@ -24,15 +24,22 @@
   ],
   "devDependencies": {
     "eslint": "^1.7.3",
-    "node-static": "^0.7.7",
-    "webpack": "^1.12.2",
-    "webpack-dev-server": "^1.12.1"
+    "webpack": "^1.12.2"
   },
   "scripts": {
     "build": "webpack --optimize-dedupe",
-    "lint": "eslint src",
-    "test": "static build/test",
-    "demo": "static build/demo",
-    "server": "webpack-dev-server"
+    "lint": "eslint src"
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "commonjs": true
+    },
+    "rules": {
+      "no-undef": 2
+    },
+    "globals": {
+      "ActiveXObject": true
+    }
   }
 }

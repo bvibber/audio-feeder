@@ -18,7 +18,7 @@ var AudioFeeder;
 	 *                          place of creating a default one
 	 */
 	AudioFeeder = function(options) {
-		options = options || {};
+		this._options = options || {};
 
 		this.rate = 0; // pending init
 		this.channels = 0; // pending init
@@ -42,11 +42,11 @@ var AudioFeeder;
 		this.rate = sampleRate;
 
 		if (WebAudioBackend.isSupported()) {
-			this._backend = new WebAudioBackend(numChannels, sampleRate, options);
+			this._backend = new WebAudioBackend(numChannels, sampleRate, this._options);
 		} else if (FlashBackend.isSupported()) {
-			this._backend = new FlashBackend(numChannels, sampleRate, options);
+			this._backend = new FlashBackend(numChannels, sampleRate, this._options);
 		} else {
-			this._backend = new StubBackend(numChannels, sampleRate, options);
+			this._backend = new StubBackend(numChannels, sampleRate, this._options);
 		}
 	};
 
@@ -94,7 +94,7 @@ var AudioFeeder;
 	 */
 	AudioFeeder.prototype.bufferData = function(sampleData) {
 		if (this._backend) {
-			var samples = this._resample(samplesData);
+			var samples = this._resample(sampleData);
 			this._backend.appendBuffer(samples);
 		}
 	};
@@ -118,7 +118,7 @@ var AudioFeeder;
 	 * @todo replace with volume property
 	 */
 	AudioFeeder.prototype.mute = function() {
-		this.muted = muted = true;
+		this.muted = true;
 		this._backend.mute();
 	};
 
@@ -126,7 +126,7 @@ var AudioFeeder;
 	 * @todo replace with volume property
 	 */
 	AudioFeeder.prototype.unmute = function() {
-		this.muted = muted = false;
+		this.muted = false;
 		this._backend.unmute();
 	};
 
@@ -201,25 +201,22 @@ var AudioFeeder;
 	 *
 	 * @return boolean
 	 */
-	BaseAudioFeeder.isSupported = function() {
-		return !!Float32Array;
+	AudioFeeder.isSupported = function() {
+		return !!Float32Array && (WebAudioBackend.isSupported() || FlashBackend.isSupported());
 	};
-
-	/**
-	 * The AudioContext instance managed by AudioFeeder class, if any.
-	 * @property AudioContext
-	 */
-	AudioFeeder.sharedAudioContext = null;
 
 	/**
 	 * Force initialization of AudioFeeder.sharedAudioContext.
 	 *
-	 * Some browser (such as mobile Safari) disable audio output unless
+	 * Some browsers (such as mobile Safari) disable audio output unless
 	 * first triggered from a UI event handler; call this method as a hint
 	 * that you will be starting up an AudioFeeder soon but won't have data
 	 * for it until a later callback.
 	 */
 	AudioFeeder.initSharedAudioContext = function() {
+		if (WebAudioBackend.isSupported()) {
+			WebAudioBackend.initSharedAudioContext();
+		}
 	};
 
 })();
