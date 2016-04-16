@@ -15,10 +15,11 @@
    * Resampling to stereo 44.1 kHz is done upstream in AudioFeeder.
    */
   var FlashBackend = function(numChannels, sampleRate, options) {
+    options = options || {};
     var flashOptions = {};
-    if (typeof this._options.base === 'string') {
+    if (typeof options.base === 'string') {
       // @fixme replace the version string with an auto-updateable one
-      flashOptions.swf = this._options.base + '/dynamicaudio.swf?version=0.1.0alpha';
+      flashOptions.swf = options.base + '/dynamicaudio.swf?version=0.1.0alpha';
     }
     this._flashaudio = new DynamicAudio(flashOptions);
     this._flashBuffer = '';
@@ -190,7 +191,7 @@
         }
       }, 20);
     }
-    if (self._flashaudio && self.flashaudio.flashElement.write) {
+    if (self._flashaudio && self._flashaudio.flashElement.write) {
       callback();
     } else {
       pingFlashPlugin();
@@ -204,7 +205,7 @@
    * or starvation may occur immediately.
    */
   FlashBackend.prototype.start = function() {
-    this.flashaudio.flashElement.start();
+    this._flashaudio.flashElement.start();
   };
 
   /**
@@ -212,7 +213,7 @@
    * We'll probably come back soon.
    */
   FlashBackend.prototype.stop = function() {
-    this.flashaudio.flashElement.stop();
+    this._flashaudio.flashElement.stop();
   };
 
   /**
