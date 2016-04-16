@@ -1,5 +1,7 @@
 (function() {
 
+  var dynamicaudio_swf = require('file?name=[name].[ext]?[hash]!../assets/dynamicaudio.swf');
+
   /**
    * Constructor for AudioFeeder's Flash audio backend.
    * @class
@@ -307,7 +309,7 @@
 
 	DynamicAudio.prototype = {
 		nextId: null,
-		swf: 'dynamicaudio.swf',
+		swf: dynamicaudio_swf,
 
 		flashWrapper: null,
 		flashElement: null,

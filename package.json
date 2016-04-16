@@ -24,7 +24,8 @@
   ],
   "devDependencies": {
     "eslint": "^1.7.3",
-    "webpack": "^1.12.2"
+    "webpack": "^1.12.2",
+    "file-loader": "^0.8.5"
   },
   "scripts": {
     "build": "webpack --optimize-dedupe",
