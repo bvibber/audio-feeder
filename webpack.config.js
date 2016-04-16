@@ -6,7 +6,7 @@ module.exports = [
     output: {
       path: 'build',
       filename: 'AudioFeeder.js',
-      libraryTarget: 'var',
+      libraryTarget: 'umd',
       library: 'AudioFeeder'
     }
   },
