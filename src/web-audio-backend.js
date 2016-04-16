@@ -134,7 +134,7 @@
    * @access private
    */
   WebAudioBackend.prototype._samplesQueued = function() {
-    var bufferedSamples = this._bufferQueue.samplesQueued();
+    var bufferedSamples = this._bufferQueue.sampleCount();
     var remainingSamples = Math.floor(this._timeAwaitingPlayback() * this.rate);
 
     return bufferedSamples + remainingSamples;
