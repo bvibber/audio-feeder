@@ -59,9 +59,7 @@ You will need to ensure that dynamicaudio.swf is included along with your
 bundled JS/HTML/etc output to support IE 10/11, and may need to manually set
 the base path in the options to the AudioFeeder constructor.
 
-Building:
-
-1. make
+See the section below on rebuilding the pre-packed files for more info.
 
 ## Usage
 
@@ -124,6 +122,8 @@ See also the included demo.html file for a live sample web page.
 AudioFeeder works with 32-bit floating point PCM audio. Data packets are
 represented as an array containing a separate Float32Array for each channel.
 
+Warning: this may change to use a wrapper class before 1.0.
+
 ## Status and audio/video synchronization
 
 Playback state including the current playback position in seconds can be
@@ -144,10 +144,58 @@ playbackPosition tracks the time via actual samples output, corrected for drops
 and underruns. This value is suitable for use in scheduling output of synchronized
 video frames.
 
+This high-level pseudocode shows a simplified version of the playback sync logic
+from the [ogv.js video player](https://github.com/brion/ogv.js):
+
+```
+function processMediaData() {
+  var state = audioFeeder.getPlaybackState();
+
+  while (codec.audioReady && state.samplesQueued < audioFeeder.bufferSize * 2) {
+    // When our audio buffer gets low, feed it some more audio data.
+    audioFeeder.bufferData(decodeAudioPacket());
+  }
+
+  if (codec.frameReady && state.playbackPosition >= codec.nextFrameTimestamp) {
+    // When the audio playback has reached the scheduled time position
+    // of the next frame, decode and draw it.
+    player.drawFrame(codec.decodeVideoPacket());
+  }
+
+  // And check back in before the next frame or buffer expiration!
+  if (codec.dataPending) {
+    setTimeout(processMediaData, timeUntilNextExcitingEvent);
+  }
+}
+processMediaData();
+```
+
+The caller is responsible for maintaining a loop and scheduling any decoding,
+frame drawing, etc.
+
+## Performance considerations
+
+Beware that setTimeout, setInterval, and requestAnimationFrame may be throttled
+on background tabs, leading to spotty performance if scheduling decoding
+based on them.
+
+You can buffer an arbitrarily large amount of audio data, but for non-trivial
+examples it's best to decode or generate audio in smallish chunks and buffer
+them over time. Pre-buffering will eat more memory, and could lead to slowness
+on the main thread if you process a lot of data on the main thread in one
+function call.
+
+Performing other slow tasks on the foreground thread may also prevent the
+Web Audio API or Flash callbacks from being called in a timely fashion,
+resulting in audio underruns even if lots of data has been buffered up.
+
 ## Events
 
 There is currently only one supported event, the 'onstarved' property.
 This is called if available buffered data runs out during playback.
+
+You can use this event to buffer additional data at the last minute,
+or to trigger a close-out of the feeder when no more data is available.
 
 Todo:
 * add events for beginning of playback?
