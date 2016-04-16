@@ -19,7 +19,7 @@
     var flashOptions = {};
     if (typeof options.base === 'string') {
       // @fixme replace the version string with an auto-updateable one
-      flashOptions.swf = options.base + '/dynamicaudio.swf?version=0.1.0alpha';
+      flashOptions.swf = options.base + '/dynamicaudio.swf?version=0.1.0';
     }
     this._flashaudio = new DynamicAudio(flashOptions);
     this._flashBuffer = '';

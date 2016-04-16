@@ -15,36 +15,19 @@ and is suitable for use in custom audio and video playback.
 
 ## Updates
 
-* ?? - ??
- * Refactoring code paths and build process
+* 0.1.0 - 2016-04-16
+ * Refactored code paths and build process!
+ * Can now be imported directly into a webpack-based project
+ * 'make build' to pre-build standalone .js to use in other build processes
 * 0.0.2 - 2016-03-27
  * Broken out from ogv.js, cleaning up to publish as npm module
 
-## Installing with Bower
+## Installing with webpack
 
-If bundling via Bower, add to your bower dependencies:
+If your project is built with webpack, it's easy to bundle up AudioFeeder's
+JavaScript classes and the Flash shim for IE.
 
-```
-bower install audio-feeder
-```
-
-By default, files will go into the bower_components/audio-feeder directory.
-You will need to manually load the AudioFeeder.js file, such as:
-
-```
-<script src="bower_components/audio-feeder/AudioFeeder.js"></script>
-```
-
-or else load it through some other bundling process.
-
-Then follow the instructions in the 'Usage' section below. You will need
-to ensure that dynamicaudio.swf is also packaged along with your bundled
-JS output from browserify to support IE 10/11, and may need to manually
-set the base path in the options to the AudioFeeder constructor.
-
-## Installing with Browserify or Webpack
-
-If bundling via Browserify or Webpack, add to your npm dependencies:
+Add to your npm dependencies:
 
 ```
 npm install audio-feeder
@@ -56,10 +39,29 @@ and in your using code, set up the class like so:
 var AudioFeeder = require('audio-feeder');
 ```
 
-Then follow the instructions in the 'Usage' section below. You will need
-to ensure that dynamicaudio.swf is also packaged along with your bundled
-JS output to support IE 10/11, and may need to manually set the base path
-in the options to the AudioFeeder constructor.
+The Flash shim dynamicaudio.swf (needed for IE 10/11) should be bundled
+automatically along with your output, via the
+[file-loader plugin for webpack](https://www.npmjs.com/package/file-loader).
+However if you have additional build steps, you may need to ensure that
+this file gets copied along with the .js and any other assets, and that
+URL paths are correctly interpreted.
+
+## Using in other build systems
+
+If your main project doesn't use webpack, you can build a pre-packed
+AudioFeeder.js with webpack locally, or download a pre-built release
+archive from https://github.com/brion/audio-feeder/releases
+
+AudioFeeder.js can then be directly loaded in a <script>, or you can
+use it in another packaging system.
+
+You will need to ensure that dynamicaudio.swf is included along with your
+bundled JS/HTML/etc output to support IE 10/11, and may need to manually set
+the base path in the options to the AudioFeeder constructor.
+
+Building:
+
+1. make
 
 ## Usage
 
@@ -165,22 +167,55 @@ fallback to work!
 Flash output is resampled to 2-channel 44.1 kHz, which is the only supported
 output format for dynamically generated audio in Flash.
 
+## Rebuilding pre-packed AudioFeeder.js
+
+The pre-packed AudioFeeder.js included in tarball releases can be built
+from the source files.
+
+Build prerequisites:
+* bash
+* make
+* node.js / npm
+
+```
+# Fetch build dependencies (webpack, eslint etc)
+npm install
+
+# Lint and rebuild
+make
+```
+
+This will produce a 'build' subdirectory containing a ready to use
+AudioFeeder.js and dynamicaudio.swf, as well as a demo.html example
+page.
+
+It may or may not work to build on Windows given a suitable shell.
+If having trouble with the Makefile, try calling via npm directly:
+
+```
+npm run-script lint
+npm run-script build
+```
+
 ## Rebuilding Flash shim
 
 The Flash shim can be rebuilt from source using the Apache Flex SDK.
 The Makefile in this project fetches a local copy of the SDK, which
 is not conveniently packaged.
 
+Building the Flash shim is known to work on Mac OS X and Linux.
+
 Build prerequisites:
 
-* bash / make / etc
+* bash
+* make
 * java
 * ant
 * curl
 
 ```
 # Rebuild dynamicaudio.swf, installing Flex SDK if necessary
-make
+make swf
 ```
 
 Be warned that downloading libraries for the Apache Flex SDK may prompt
