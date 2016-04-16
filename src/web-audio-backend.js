@@ -51,6 +51,7 @@
     this._queuedTime = 0;
     this._delayedTime = 0;
     this._dropped = 0;
+    this._muted = false;
 
     // @todo support new audio worker mode too
     if (context.createScriptProcessor) {
@@ -221,6 +222,20 @@
 
     this._context = null;
     this._buffers = null;
+  };
+
+  /**
+   * Set the output to muted.
+   */
+  WebAudioBackend.prototype.mute = function() {
+    this._muted = true;
+  };
+
+  /**
+   * Set the output to unmuted.
+   */
+  WebAudioBackend.prototype.unmute = function() {
+    this._muted = false;
   };
 
   /**

@@ -27,6 +27,7 @@
     this._cachedFlashState = null;
     this._cachedFlashTime = 0;
     this._cachedFlashInterval = 40; // resync state no more often than every X ms
+    this._muted = false;
   };
 
   /**
@@ -64,20 +65,26 @@
    * @todo try sending floats to flash without losing precision?
    */
   FlashBackend.prototype._resampleFlash = function(samples) {
-  	var sampleincr = 1;
-  	var samplecount = samples[0].length;
-  	var newSamples = new Int16Array(samplecount * 2);
-  	var chanLeft = samples[0];
-  	var chanRight = this.channels > 1 ? samples[1] : chanLeft;
-  	var multiplier = 16384; // smaller than 32768 to allow some headroom from those floats
-  	for(var s = 0; s < samplecount; s++) {
-  		var idx = (s * sampleincr) | 0;
-  		var idx_out = s * 2;
-  		// Use a smaller
-  		newSamples[idx_out] = chanLeft[idx] * multiplier;
-  		newSamples[idx_out + 1] = chanRight[idx] * multiplier;
-  	}
-  	return newSamples;
+    if (this._muted) {
+      // if muted: generate fitting number of samples for audio clock
+      var samplecount = samples[0].length;
+      return new Int16Array(samplecount * 2);
+    } else {
+      var sampleincr = 1;
+    	var samplecount = samples[0].length;
+    	var newSamples = new Int16Array(samplecount * 2);
+    	var chanLeft = samples[0];
+    	var chanRight = this.channels > 1 ? samples[1] : chanLeft;
+    	var multiplier = 16384; // smaller than 32768 to allow some headroom from those floats
+    	for(var s = 0; s < samplecount; s++) {
+    		var idx = (s * sampleincr) | 0;
+    		var idx_out = s * 2;
+    		// Use a smaller
+    		newSamples[idx_out] = chanLeft[idx] * multiplier;
+    		newSamples[idx_out + 1] = chanRight[idx] * multiplier;
+    	}
+    	return newSamples;
+    }
   };
 
   var hexDigits = ['0', '1', '2', '3', '4', '5', '6', '7',
@@ -230,6 +237,20 @@
     var wrapper = this._flashaudio.flashWrapper;
     wrapper.parentNode.removeChild(wrapper);
     this._flashaudio = null;
+  };
+
+  /**
+   * Set the output to muted.
+   */
+  FlashBackend.prototype.mute = function() {
+    this._muted = true;
+  };
+
+  /**
+   * Set the output to unmuted.
+   */
+  FlashBackend.prototype.unmute = function() {
+    this._muted = false;
   };
 
   /**
