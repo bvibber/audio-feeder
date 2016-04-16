@@ -36,7 +36,10 @@
       "commonjs": true
     },
     "rules": {
-      "no-undef": 2
+      "no-undef": 2,
+      "valid-jsdoc": [1, {
+        "requireReturn": false
+      }]
     },
     "globals": {
       "ActiveXObject": true

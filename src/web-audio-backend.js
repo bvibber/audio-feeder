@@ -1,21 +1,49 @@
+/**
+ * @file Web Audio API backend for AudioFeeder
+ * @author Brion Vibber <brion@pobox.com>
+ * @copyright (c) 2013-2016 Brion Vibber
+ * @license MIT
+ */
+
 (function() {
 
   var AudioContext = window.AudioContext || window.webkitAudioContext,
     BufferQueue = require('./buffer-queue.js');
 
   /**
-   * AudioFeeder backend using Web Audio API.
+   * Constructor for AudioFeeder's Web Audio API backend.
+   * @class
+   * @param {number} numChannels - requested count of output channels
+   * @param {number} sampleRate - requested sample rate for output
+   * @param {Object} options - pass URL path to directory containing 'dynamicaudio.swf' in 'base' parameter
    *
-   * @copyright (c) 2013-2016 Brion Vibber <brion@pobox.com>
-   * @license MIT
+   * @classdesc Web Audio API output backend for AudioFeeder.
+   * Maintains an internal {@link BufferQueue} of audio samples to be output on demand.
    */
   function WebAudioBackend(numChannels, sampleRate, options) {
     var context = options.audioContext || WebAudioBackend.initSharedAudioContext();
 
     this._context = context;
 
+    /**
+     * Actual sample rate supported for output, in Hz
+     * @type {number}
+     * @readonly
+     */
     this.rate = context.sampleRate;
+
+    /**
+     * Actual count of channels supported for output
+     * @type {number}
+     * @readonly
+     */
     this.channels = Math.min(numChannels, 2); // @fixme remove this limit
+
+    /**
+     * Size of output buffers in samples, as a hint for latency/scheduling
+     * @type {number}
+     * @readonly
+     */
     this.bufferSize = 4096 || (options.bufferSize | 0);
 
     this._bufferQueue = new BufferQueue(this.channels);
@@ -37,6 +65,8 @@
 
   /**
    * onaudioprocess event handler for the ScriptProcessorNode
+   * @param {AudioProcessingEvent} event - audio processing event object
+   * @access private
    */
   WebAudioBackend.prototype._audioProcess = function(event) {
     var channel, input, output, i, playbackTime;
@@ -100,7 +130,8 @@
   /**
    * Return a count of samples that have been queued or output but not yet played.
    *
-   * @return {number} sample count
+   * @returns {number} - sample count
+   * @access private
    */
   WebAudioBackend.prototype._samplesQueued = function() {
     var bufferedSamples = this._bufferQueue.samplesQueued();
@@ -110,15 +141,20 @@
   };
 
   /**
-   * Return time duration before between the present and the endpoint of audio
-   * we have alreaady sent out to Web Audio for playback.
+   * Return time duration between the present and the endpoint of audio
+   * we have already sent out from our queue to Web Audio.
    *
-   * @return {number} seconds
+   * @returns {number} - seconds
    */
   WebAudioBackend.prototype._timeAwaitingPlayback = function() {
     return Math.max(0, this._playbackTimeAtBufferTail - this._context.currentTime);
   };
 
+  /**
+   * Get info about current playback state.
+   *
+   * @return {PlaybackState} - info about current playback state
+   */
   WebAudioBackend.prototype.getPlaybackState = function() {
     return {
       playbackPosition: this._queuedTime - this._timeAwaitingPlayback(),
@@ -128,20 +164,46 @@
     };
   };
 
+  /**
+   * Wait asynchronously until the backend is ready before continuing.
+   *
+   * This will always call immediately for the Web Audio API backend,
+   * as there is no async setup process.
+   *
+   * @param {function} callback - to be called when ready
+   */
   WebAudioBackend.prototype.waitUntilReady = function(callback) {
     callback();
   };
 
-  WebAudioBackend.prototype.appendBuffer = function(buffer) {
-    this._bufferQueue.appendBuffer(buffer);
+  /**
+   * Append a buffer of audio data to the output queue for playback.
+   *
+   * Audio data must be at the expected sample rate; resampling is done
+   * upstream in {@link AudioFeeder}.
+   *
+   * @param {SampleBuffer} sampleData - audio data at target sample rate
+   */
+  WebAudioBackend.prototype.appendBuffer = function(sampleData) {
+    this._bufferQueue.appendBuffer(sampleData);
   };
 
+  /**
+   * Start playback.
+   *
+   * Audio should have already been queued at this point,
+   * or starvation may occur immediately.
+   */
   WebAudioBackend.prototype.start = function() {
     this._node.onaudioprocess = this._audioProcess.bind(this);
     this._node.connect(this._context.destination);
     this._playbackTimeAtBufferTail = this._context.currentTime;
   };
 
+  /**
+   * Stop playback, but don't release resources or clear the buffers.
+   * We'll probably come back soon.
+   */
   WebAudioBackend.prototype.stop = function() {
     if (this._node) {
       this._node.onaudioprocess = null;
@@ -149,6 +211,11 @@
     }
   };
 
+  /**
+   * Close out the playback system and release resources.
+   *
+   * @todo consider releasing the AudioContext when possible
+   */
   WebAudioBackend.prototype.close = function() {
     this.stop();
 
@@ -156,16 +223,34 @@
     this._buffers = null;
   };
 
+  /**
+   * Check if Web Audio API appears to be supported.
+   *
+   * Note this is somewhat optimistic; will return true even if there are no
+   * audio devices available, as long as the API is present.
+   *
+   * @returns {boolean} - true if this browser appears to support Web Audio API
+   */
   WebAudioBackend.isSupported = function() {
     return !!AudioContext;
   };
 
+  /**
+	 * Force initialization of the default Web Audio API context.
+	 *
+	 * Some browsers (such as mobile Safari) disable audio output unless
+	 * first triggered from a UI event handler; call this method as a hint
+	 * that you will be starting up an AudioFeeder soon but won't have data
+	 * for it until a later callback.
+   *
+   * @returns {AudioContext|null} - initialized AudioContext instance, if applicable
+	 */
   WebAudioBackend.initSharedAudioContext = function() {
 		if (WebAudioBackend.sharedAudioContext === null) {
-			if (AudioContext) {
+			if (WebAudioBackend.isSupported()) {
 				// We're only allowed 4 contexts on many browsers
 				// and there's no way to discard them (!)...
-				var context = WebAudioBackend.sharedAudioContext = new AudioContext(),
+				var context = new AudioContext(),
 					node;
 				if (context.createScriptProcessor) {
 					node = context.createScriptProcessor(1024, 0, 2);
@@ -178,6 +263,9 @@
 				// Don't actually run any audio, just start & stop the node
 				node.connect(context.destination);
 				node.disconnect();
+
+        // So far so good. Keep it around!
+        WebAudioBackend.sharedAudioContext = context;
 			}
 		}
     return WebAudioBackend.sharedAudioContext;

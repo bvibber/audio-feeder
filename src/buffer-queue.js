@@ -1,20 +1,22 @@
 /**
+ * @file Abstraction around a queue of audio buffers.
+ *
+ * @author Brion Vibber <brion@pobox.com>
+ * @copyright (c) 2013-2016 Brion Vibber
+ * @license MIT
+ */
+
+/**
+ * Constructor for BufferQueue class.
+ * @class
+ * @param {number} numChannels - channel count to validate against
+ *
+ * @classdesc
  * Abstraction around a queue of audio buffers.
  *
- * Stuff input buffers of any length in via append(buffer),
- * check how much is queued with sampleCount(), and pull out
- * data from the buffer head with shift(maxSampleCount).
- *
- * Buffers are arrays containing one Float32Array of sample data
- * per channel. Channel counts must match the expected value, and
- * all channels within a buffer must have the same length in samples.
- *
- * Since input data may be stored for a while before being taken
- * back out, be sure that your Float32Arrays for channel data are
- * standalone, not backed on an ArrayBuffer that might change!
- *
- * @copyright (c) 2013-2016 Brion Vibber <brion@pobox.com>
- * @license MIT
+ * Stuff input buffers of any length in via {@link BufferQueue#append},
+ * check how much is queued with {@link BufferQueue#sampleCount}, and pull out
+ * data of any length from the start with {@link BufferQueue#shift}.
  */
 function BufferQueue(numChannels) {
   if (numChannels < 1 || numChannels !== Math.round(numChannels)) {
@@ -27,7 +29,7 @@ function BufferQueue(numChannels) {
 /**
  * Count how many samples are queued up
  *
- * @return {number}
+ * @returns {number} - total count in samples
  */
 BufferQueue.prototype.sampleCount = function() {
   var count = 0;
@@ -40,42 +42,51 @@ BufferQueue.prototype.sampleCount = function() {
 /**
  * Validate a buffer for correct object layout
  *
- * @param buffer {Array}
- * @throws on invalid input
+ * @param {SampleBuffer} buffer - an audio buffer to check
+ * @returns {boolean} - true if input buffer is valid
  */
 BufferQueue.prototype.validate = function(buffer) {
   if (buffer.length !== this.channels) {
-    throw 'Mismatch in channel count between buffer and queue';
+    return false;
   }
 
   var sampleCount;
   for (var i = 0; i < buffer.length; i++) {
     var channelData = buffer[i];
     if (!(channelData instanceof Float32Array)) {
-      throw 'Channel data not in Float32Array format';
+      return false;
     }
     if (i == 0) {
       sampleCount = channelData.length;
     } else if (channelData.length !== sampleCount) {
-      throw 'Channel data not of matching length';
+      return false;
     }
   }
+
+  return true;
 };
 
 /**
  * Append a buffer of input data to the queue...
  *
- * @param {Array} of Float32Arrays
+ * @param {SampleBuffer} buffer - an audio buffer to append
+ * @throws exception on invalid input
  */
 BufferQueue.prototype.append = function(buffer) {
-  this.validate(buffer);
+  if (!this.validate(buffer)) {
+    throw "Invalid audio buffer passed to BufferQueue.append";
+  }
   this._buffers.push(buffer);
 };
 
 /**
- * Shift out a buffer with up to the given maximum sample count
+ * Shift out a buffer with up to the given maximum sample count.
+ * If less data is available, only the available data will be
+ * returned. Call {@link BufferQueue#sampleCount} ahead of time
+ * to check how many are available.
  *
- * @param {number} maxSamples
+ * @param {number} maxSamples - maximum count of samples to return on this call
+ * @returns {SampleBuffer} - audio buffer with zero or more samples
  */
 BufferQueue.prototype.shift = function(maxSamples) {
   var sampleCount = Math.min(this.sampleCount(), maxSamples | 0),
