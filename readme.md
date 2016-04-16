@@ -52,7 +52,7 @@ If your main project doesn't use webpack, you can build a pre-packed
 AudioFeeder.js with webpack locally, or download a pre-built release
 archive from https://github.com/brion/audio-feeder/releases
 
-AudioFeeder.js can then be directly loaded in a <script>, or you can
+AudioFeeder.js can then be directly loaded in a &lt;script>, or you can
 use it in another packaging system.
 
 You will need to ensure that dynamicaudio.swf is included along with your
