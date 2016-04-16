@@ -1,10 +1,8 @@
 (function() {
 
 	var BufferQueue = require('./buffer-queue.js'),
-		Backend = require('./backend.js'),
 		WebAudioBackend = require('./web-audio-backend.js'),
-		FlashBackend = require('./flash-backend.js'),
-		StubBackend = require('./stub-backend.js');
+		FlashBackend = require('./flash-backend.js');
 
 
 	/**
@@ -111,7 +109,7 @@
 		} else if (FlashBackend.isSupported()) {
 			this._backend = new FlashBackend(numChannels, sampleRate, this._options);
 		} else {
-			this._backend = new StubBackend(numChannels, sampleRate, this._options);
+			throw 'No supported backend';
 		}
 	};
 
