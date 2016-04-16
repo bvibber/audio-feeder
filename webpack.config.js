@@ -1,21 +1,22 @@
 var webpack = require('webpack');
-var path = require("path");
-
-const BUILD_DIR = 'build';
-
-function publicPath() {
-  return '/' + BUILD_DIR + '/';
-}
 
 module.exports = [
   {
     entry: './src/index.js',
     output: {
-      path: path.resolve(__dirname, BUILD_DIR),
-      publicPath: publicPath(),
+      path: 'build',
       filename: 'AudioFeeder.js',
       libraryTarget: 'var',
       library: 'AudioFeeder'
+    }
+  },
+  {
+    entry: './src/demo.js',
+    output: {
+      path: 'build',
+      filename: 'demo.js',
+      libraryTarget: 'var',
+      library: 'demo'
     }
   }
 ];

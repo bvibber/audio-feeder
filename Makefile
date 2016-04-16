@@ -1,6 +1,26 @@
-all : swf
+all : build
 
-.FAKE : all swf deps clean distclean flexsdk flexsdk-base flexsdk-libs flexsdk-playerglobal
+.FAKE : all swf lint build deps clean distclean flexsdk flexsdk-base flexsdk-libs flexsdk-playerglobal
+
+build : lint swf
+	npm run-script build
+
+lint :
+	npm run-script lint
+
+clean :
+	rm -f assets/dynamicaudio.swf
+	rm -rf build
+
+distclean :
+	rm -f apache-flex-sdk-*-bin.tar.gz
+	rm -rf apache-flex-sdk-*-bin
+	rm -f flashplayer-libs
+
+
+# -----------
+# Flash stuff
+# -----------
 
 HERE:=`pwd`
 
@@ -15,14 +35,6 @@ PLAYERGLOBAL_DIR:=$(PLAYERGLOBAL_BASE)/11.1
 PLAYERGLOBAL_URL:=http://fpdownload.macromedia.com/get/flashplayer/updaters/11/playerglobal11_1.swc
 
 swf : assets/dynamicaudio.swf
-
-clean :
-	rm -f assets/dynamicaudio.swf
-
-distclean :
-	rm -f apache-flex-sdk-*-bin.tar.gz
-	rm -rf apache-flex-sdk-*-bin
-	rm -f flashplayer-libs
 
 assets/dynamicaudio.swf : src/dynamicaudio.as flexsdk
 	FLEX_HOME="$(HERE)/$(FLEXSDK_DIR)" \

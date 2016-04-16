@@ -83,7 +83,7 @@
       this._delayedTime += (playbackTime - expectedTime);
     }
 
-    if (this._bufferQueue.samplesQueued() < this.bufferSize) {
+    if (this._bufferQueue.sampleCount() < this.bufferSize) {
       // We might be in a throttled background tab; go ping the decoder
       // and let it know we need more data now!
       // @todo use standard event firing?
@@ -95,7 +95,7 @@
     // If we still haven't got enough data, write a buffer of silence
     // to all channels and record an underrun event.
     // @todo go ahead and output the data we _do_ have?
-    if (this._bufferQueue.samplesQueued() < this.bufferSize) {
+    if (this._bufferQueue.sampleCount() < this.bufferSize) {
       for (channel = 0; channel < this.channels; channel++) {
         output = event.outputBuffer.getChannelData(channel);
         for (i = 0; i < this.bufferSize; i++) {
@@ -236,6 +236,14 @@
   };
 
   /**
+   * Holder of audio context to be used/reused by WebAudioBackend.
+   * @see {WebAudioBackend#initSharedAudioContext}
+   *
+   * @type {AudioContext}
+   */
+  WebAudioBackend.sharedAudioContext = null;
+
+  /**
 	 * Force initialization of the default Web Audio API context.
 	 *
 	 * Some browsers (such as mobile Safari) disable audio output unless
@@ -246,7 +254,7 @@
    * @returns {AudioContext|null} - initialized AudioContext instance, if applicable
 	 */
   WebAudioBackend.initSharedAudioContext = function() {
-		if (WebAudioBackend.sharedAudioContext === null) {
+		if (!WebAudioBackend.sharedAudioContext) {
 			if (WebAudioBackend.isSupported()) {
 				// We're only allowed 4 contexts on many browsers
 				// and there's no way to discard them (!)...
@@ -270,5 +278,7 @@
 		}
     return WebAudioBackend.sharedAudioContext;
 	};
+
+  module.exports = WebAudioBackend;
 
 })();

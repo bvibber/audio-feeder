@@ -1,5 +1,6 @@
 (function() {
 
+  /* global ActiveXObject */
   var dynamicaudio_swf = require('file?name=[name].[ext]?[hash]!../assets/dynamicaudio.swf');
 
   /**
@@ -346,4 +347,5 @@
 	};
 
   module.exports = FlashBackend;
+
 })();

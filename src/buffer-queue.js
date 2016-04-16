@@ -14,7 +14,7 @@
  * @classdesc
  * Abstraction around a queue of audio buffers.
  *
- * Stuff input buffers of any length in via {@link BufferQueue#append},
+ * Stuff input buffers of any length in via {@link BufferQueue#appendBuffer},
  * check how much is queued with {@link BufferQueue#sampleCount}, and pull out
  * data of any length from the start with {@link BufferQueue#shift}.
  */
@@ -37,6 +37,20 @@ BufferQueue.prototype.sampleCount = function() {
     count += buffer[0].length;
   });
   return count;
+};
+
+/**
+ * Create an empty audio sample buffer with space for the given count of samples.
+ *
+ * @param {number} sampleCount - number of samples to reserve in the buffer
+ * @returns {SampleBuffer} - empty buffer
+ */
+BufferQueue.prototype.createBuffer = function(sampleCount) {
+  var output = [];
+  for (var i = 0; i < this.channels; i++) {
+    output[i] = new Float32Array(sampleCount);
+  }
+  return output;
 };
 
 /**
@@ -72,9 +86,9 @@ BufferQueue.prototype.validate = function(buffer) {
  * @param {SampleBuffer} buffer - an audio buffer to append
  * @throws exception on invalid input
  */
-BufferQueue.prototype.append = function(buffer) {
+BufferQueue.prototype.appendBuffer = function(buffer) {
   if (!this.validate(buffer)) {
-    throw "Invalid audio buffer passed to BufferQueue.append";
+    throw "Invalid audio buffer passed to BufferQueue.appendBuffer";
   }
   this._buffers.push(buffer);
 };
@@ -102,7 +116,7 @@ BufferQueue.prototype.shift = function(maxSamples) {
     inputData = null,
     i = 0;
 
-  while (output.length < sampleCount) {
+  while (pos < sampleCount) {
     input = this._buffers[0];
     inputSamples = input[0].length;
 
