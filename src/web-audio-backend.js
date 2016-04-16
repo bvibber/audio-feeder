@@ -46,7 +46,7 @@
      */
     this.bufferSize = 4096 || (options.bufferSize | 0);
 
-    this._bufferQueue = new BufferQueue(this.channels);
+    this._bufferQueue = new BufferQueue(this.channels, this.bufferSize);
     this._playbackTimeAtBufferTail = context.currentTime;
     this._queuedTime = 0;
     this._delayedTime = 0;
@@ -111,7 +111,7 @@
     var volume = (this._muted ? 0 : 1);
 
     // Actually get that data and write it out...
-    var inputBuffer = this._bufferQueue.shift(this.bufferSize);
+    var inputBuffer = this._bufferQueue.nextBuffer();
     if (inputBuffer[0].length < this.bufferSize) {
       // This should not happen, but trust no invariants!
       throw 'Audio buffer not expected length.';
