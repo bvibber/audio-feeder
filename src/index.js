@@ -394,7 +394,25 @@
 		} else {
 			throw 'Invalid state: AudioFeeder cannot flush before init';
 		}
-	}
+	};
+
+	/**
+	 * Inject a delay into the output stream to compensate for lost
+	 * audio/visual synchronization. The reported playbackPosition
+	 * will stop advancing until the requested time passes.
+	 *
+	 * The actual delay may not appear in output until the next
+	 * output buffer boundary, which depends on the bufferSize.
+	 *
+	 * @param {number} seconds - time in seconds to delay
+	 */
+	AudioFeeder.prototype.delay = function(seconds) {
+		if (this._backend) {
+			this._backend.delay(seconds);
+		} else {
+			throw 'Invalid state: AudioFeeder cannot delay before init';
+		}
+	};
 
 	/**
 	 * Close out the audio channel. The AudioFeeder instance will no

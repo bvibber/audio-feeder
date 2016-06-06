@@ -50,6 +50,7 @@
     this._queuedTime = 0;
     this._delayedTime = 0;
     this._dropped = 0;
+    this._syncRecoveryTime = 0;
     this._liveBuffer = this._bufferQueue.createBuffer(this.bufferSize);
 
     // @todo support new audio worker mode too
@@ -228,11 +229,13 @@
    * @return {PlaybackState} - info about current playback state
    */
   WebAudioBackend.prototype.getPlaybackState = function() {
+    var position = this._queuedTime - this._timeAwaitingPlayback();
     return {
-      playbackPosition: this._queuedTime - this._timeAwaitingPlayback(),
+      playbackPosition: Math.max(this._syncRecoveryTime, position),
       samplesQueued: this._samplesQueued(),
       dropped: this._dropped,
-      delayed: this._delayedTime
+      delayed: this._delayedTime,
+      delay: Math.max(0, this._syncRecoveryTime - position)
     };
   };
 
@@ -307,6 +310,24 @@
   WebAudioBackend.prototype.flush = function() {
     this._bufferQueue.flush();
   };
+
+    /**
+     * Inject a delay into the output stream to compensate for lost
+     * audio/visual synchronization. The reported playbackPosition
+     * will stop advancing until the requested time passes.
+     *
+     * The actual delay may not appear in output until the next
+     * output buffer boundary, which depends on the bufferSize.
+     *
+     * @param {number} seconds - time in seconds to delay
+     */
+    WebAudioBackend.prototype.delay = function(seconds) {
+        var samples = Math.round(seconds * this.rate);
+        var silence = this._bufferQueue.createBuffer(samples);
+        this._syncRecoveryTime = this.getPlaybackState().playbackPosition;
+        this._bufferQueue.appendBuffer(silence);
+        this._queuedTime -= samples / this.rate;
+    };
 
   /**
    * Close out the playback system and release resources.
