@@ -241,7 +241,20 @@
     this._flashBuffer = '';
 
     if (chunk.length > 0) {
-      this._cachedFlashState = flashElement.write(chunk);
+      //this._cachedFlashState = flashElement.write(chunk);
+      var xml = '<invoke name="write" returntype="javascript"><arguments><string>' +
+          chunk +
+          '</string></arguments></invoke>';
+      var json = flashElement.CallFunction(xml);
+      // not actually json-compliant
+      // instead of eval, parse manually.
+      var state = {};
+      var pairs = json.slice(2, -2).split(',');
+      for (var i = 0; i < pairs.length; i++) {
+        var bits = pairs[i].split(':');
+        state[bits[0]] = parseFloat(bits[1]);
+      }
+      this._cachedFlashState = state;
       this._cachedFlashTime = Date.now();
     }
   };
