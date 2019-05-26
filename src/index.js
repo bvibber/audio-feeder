@@ -2,7 +2,8 @@
 
 	var BufferQueue = require('./buffer-queue.js'),
 		WebAudioBackend = require('./web-audio-backend.js'),
-		FlashBackend = require('./flash-backend.js');
+		FlashBackend = require('./flash-backend.js'),
+		AudioTempoChanger = require('audio-tempo-changer.js');
 
 
 	/**
@@ -34,7 +35,8 @@
 	 * Object dictionary format returned from {@link AudioFeeder#getPlaybackState} and friends.
 	 *
 	 * @typedef {Object} PlaybackState
-	 * @property {number} playbackPosition - total seconds so far of audio data that have played
+	 * @property {number} playbackPosition - total seconds so far of input audio data that have played (pre tempo change)
+	 * @property {number} outputPlaybackPosition - total seconds so far of audio that has been played (post tempo change)
 	 * @property {number} samplesQueued - number of samples at target rate that are queued up for playback
 	 * @property {number} dropped - number of underrun events, when we had to play silence due to data starvation
 	 * @property {number} delayedTime - total seconds so far of silent time during playback due to data starvation
@@ -55,6 +57,7 @@
 		this._backend = null; // AudioBackend instance, after init...
 		this._resampleFractional = 0;
 		this._resampleLastSampleData = undefined;
+		this._tempoChanger = null; // Initialized at init
 	};
 
 	/**
@@ -145,8 +148,9 @@
 		}
 	});
 
+
 	/**
-	 * Current playback position, in seconds.
+	 * Current playback position, in seconds, in input time (i.e. pre tempo change)
 	 * This compensates for drops and underruns, and is suitable for a/v sync.
 	 *
 	 * @type {number}
@@ -157,6 +161,24 @@
 			if (this._backend) {
 				var playbackState = this.getPlaybackState();
 				return playbackState.playbackPosition;
+			} else {
+				return 0;
+			}
+		}
+	});
+
+	/**
+	 * Current playback position, in seconds, in output time (i.e. post tempo change)
+	 * Also compensates for drops and underruns, and is suitable for a/v sync.
+	 *
+	 * @type {number}
+	 * @readonly
+	 */
+	Object.defineProperty(AudioFeeder.prototype, 'outputPlaybackPosition', {
+		get: function getOutputPlaybackPosition() {
+			if (this._backend) {
+				var playbackState = this.getPlaybackState();
+				return playbackState.outputPlaybackPosition;
 			} else {
 				return 0;
 			}
@@ -239,6 +261,29 @@
 	});
 
 	/**
+	 * Tempo multiplier, defaults to 1.0.
+	 * @name volume
+	 * @type {number}
+	 */
+	Object.defineProperty(AudioFeeder.prototype, 'tempo', {
+		get: function getTempo() {
+			if (this._tempoChanger) {
+				return this._tempoChanger.getTempo();
+			} else {
+				throw 'Invalid state: cannot get tempo before init';
+			}
+		},
+		set: function setTempo(val) {
+			if (this._tempoChanger) {
+				this._tempoChanger.setTempo(val);
+			} else {
+				throw 'Invalid state: cannot set tempo before init';
+			}
+		}
+	});
+
+
+	/**
 	 * Start setting up for output with the given channel count and sample rate.
 	 * Audio data you provide will be resampled if necessary to whatever the
 	 * backend actually supports.
@@ -262,6 +307,9 @@
 
 		this.targetRate = this._backend.rate;
 		this.bufferSize = this._backend.bufferSize;
+
+		// Initialize tempo changer (NB! no "new")
+		this._tempoChanger = AudioTempoChanger({ sampleRate: this.targetRate, numChannels: numChannels, tempo: 1.0 });
 
 		// Pass through the starved event
 		this._backend.onstarved = (function() {
@@ -393,6 +441,13 @@
 	AudioFeeder.prototype.bufferData = function(sampleData) {
 		if (this._backend) {
 			var samples = this._resample(sampleData);
+
+			// NB! it is important all samples go through tempoChanger
+			//  it is built to switch to just copying if tempo = 1.0
+			//  but it still needs the samples to transition smoothly
+			//  and keep an accurate time map
+			samples = this._tempoChanger.process(samples);
+
 			this._backend.appendBuffer(samples);
 		} else {
 			throw 'Invalid state: AudioFeeder cannot bufferData before init';
@@ -406,7 +461,10 @@
 	 */
 	AudioFeeder.prototype.getPlaybackState = function() {
 		if (this._backend) {
-			return this._backend.getPlaybackState();
+			var state = this._backend.getPlaybackState();
+			state.outputPlaybackPosition = state.playbackPosition; // as _backend works only in output time
+			state.playbackPosition = this._tempoChanger.mapOutputToInputTime(state.outputPlaybackPosition);
+			return state;
 		} else {
 			throw 'Invalid state: AudioFeeder cannot getPlaybackState before init';
 		}
@@ -465,6 +523,7 @@
 		this._resampleFractional = 0;
 		this._resampleLastSampleData = undefined;
 		if (this._backend) {
+			this._tempoChanger.flush(this.durationBuffered);
 			this._backend.flush();
 		} else {
 			throw 'Invalid state: AudioFeeder cannot flush before init';

@@ -14,6 +14,8 @@ and is suitable for use in custom audio and video playback.
 * dynamicaudio.as and some Flash-related bits are based on code under BSD license, (c) 2010 Ben Firshman
 
 ## Updates
+* 0.4.21 - 2019-05-28
+    * Included audio-tempo-changer to allow changing tempo of audio via .tempo attribute
 * 0.4.20 - 2019-05-17
     * Fix for running Flash path when embedded into strict mode
 * 0.4.19 - 2019-03-24
