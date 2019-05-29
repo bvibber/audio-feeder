@@ -11,13 +11,8 @@ module.exports = function demo() {
     channels = 1,
     rate = 48000,
     sampleCounter = 0,
-    feeder = new AudioFeeder();
-
-  start.disabled = true;
-  feeder.init(channels, rate);
-  feeder.waitUntilReady(function() {
-    start.disabled = false;
-  });
+    feeder = new AudioFeeder(),
+    initialized = false;
 
   function bufferSineWave(time) {
     var freq = 261, // middle C
@@ -38,8 +33,18 @@ module.exports = function demo() {
     start.disabled = true;
     stop.disabled = false;
 
-    bufferSineWave(1); // pre-buffer 1s
-    feeder.start();
+    var startFn = function() {
+      bufferSineWave(1); // pre-buffer 1s
+      feeder.tempo = 0.3;
+      feeder.start();
+    };
+
+    if (!initialized) {
+      feeder.init(channels, rate);
+      feeder.waitUntilReady(startFn);
+      initialized = true;
+    } else startFn();
+
   });
 
   stop.addEventListener('click', function() {
