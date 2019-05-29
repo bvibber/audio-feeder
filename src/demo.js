@@ -16,13 +16,15 @@ module.exports = function demo() {
 
   function bufferSineWave(time) {
     var freq = 261, // middle C
+      shellFreq = 0.5, // fade in/out over 2 seconds
       chunkSamples = Math.round(time * rate), // buffer 1s at a time
       samples = Math.ceil(chunkSamples / freq) * freq,
       buffer = new Float32Array(samples),
       packet = [buffer];
 
     for (var i = 0; i < samples; i++) {
-      buffer[i] = Math.sin((sampleCounter / rate) * freq * 2 * Math.PI);
+      buffer[i] = Math.sin((sampleCounter / rate) * freq * 2 * Math.PI)
+        * Math.sin((sampleCounter / rate) * shellFreq * 2 * Math.PI);
       sampleCounter++;
     }
 
@@ -34,8 +36,8 @@ module.exports = function demo() {
     stop.disabled = false;
 
     var startFn = function() {
+      feeder.tempo = document.querySelector('#tempo').value / 100;
       bufferSineWave(1); // pre-buffer 1s
-      feeder.tempo = 0.3;
       feeder.start();
     };
 
@@ -55,7 +57,7 @@ module.exports = function demo() {
 
   feeder.onbufferlow = function() {
     console.log('buffer low');
-    while (feeder.durationBuffered < feeder.bufferThreshold * 2) {
+    while (feeder.durationBuffered * feeder.tempo < feeder.bufferThreshold * 2) {
       bufferSineWave(1);
     }
   };
@@ -76,6 +78,11 @@ module.exports = function demo() {
       feeder.volume = parseInt(this.value) / 100;
     });
   }
+
+  var tempo = document.querySelector('#tempo');
+  tempo.addEventListener('change', function() {
+    feeder.tempo = this.value / 100;
+  });
 
   start.disabled = false;
 };

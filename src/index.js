@@ -352,7 +352,7 @@
 			var inputLen = sampleData[0].length,
 				previousFractional = this._resampleFractional,
 				outputLen = inputLen * targetRate / rate + previousFractional,
-				outputSamples = Math.trunc(outputLen),
+				outputSamples = Math.floor(outputLen),
 				remainingFractional = (outputLen - outputSamples);
 
 			var interpolate;
