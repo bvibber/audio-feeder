@@ -297,10 +297,10 @@
 		this.channels = numChannels;
 		this.rate = sampleRate;
 
-		if (this._options.backendConstructor) {
-			this._backend = this._options.backendConstructor(numChannels, sampleRate, this._options);
-		}
-		else if (WebAudioBackend.isSupported()) {
+		if (this._options.backendFactory) {
+			// For a custom backend. Warning: the internal API is not stable!
+			this._backend = this._options.backendFactory(numChannels, sampleRate, this._options);
+		} else if (WebAudioBackend.isSupported()) {
 			this._backend = new WebAudioBackend(numChannels, sampleRate, this._options);
 		} else if (FlashBackend.isSupported()) {
 			this._backend = new FlashBackend(numChannels, sampleRate, this._options);

@@ -14,6 +14,8 @@ and is suitable for use in custom audio and video playback.
 * dynamicaudio.as and some Flash-related bits are based on code under BSD license, (c) 2010 Ben Firshman
 
 ## Updates
+* 0.4.22 - 2019-06-05
+    * Allow passing a custom backend in for testing and advanced usage via `options.backendFactory`.
 * 0.4.21 - 2019-05-28
     * Included audio-tempo-changer to allow changing tempo of audio via .tempo attribute
 * 0.4.20 - 2019-05-17
@@ -170,8 +172,16 @@ See also the included demo.html file for a live sample web page.
 
 ## Options  
 
-* audioContext: an AudioContext object to be use instead of creating a new one
-* base: base path containing dynamicaudio.swf for IE 10/11 Flash fallback
+WebAudio-specific:
+* `audioContext`: an `AudioContext` object to be use instead of creating a new one
+* `output`: an `AudioNode` object to attach output to instead of the default
+
+Flash-specific:
+* `base`: base path containing `dynamicaudio.swf` for IE 10/11 Flash fallback
+
+General:
+* `backendFactory`: a function to call to provide a custom backend, for testing or advanced usage. Should take params `numChannels`, `sampleRate`, and `options` and return an object conforming to the internal backend class protocol. This is not considered a stable API at this time.
+
 
 ## Data format
 
@@ -288,6 +298,16 @@ fallback to work!
 
 Flash output is resampled to 2-channel 44.1 kHz, which is the only supported
 output format for dynamically generated audio in Flash.
+
+## Rate control
+
+As of 0.4.21, the tempo or playback rate can be modified without altering pitch, suitable for use in implementing video playback control.
+
+Set the `tempo` property to a value larger than 1 to multiply speed, or less than 1 to decrease it. The `playbackPosition` property is returned in input units, making it fairly easy to report back a current time suitable for A/V sync; however some properties such as `durationBuffered` will return output units and should be used carefully when at non-default empos.
+
+Currently the tempo control is not applied to data that has already been buffered, which can produce a "lag time" before tempo changes take effect.
+
+Note that stereo or multi-channel input is mixed down to mono for processing when the tempo is not set at 1; see [audio-tempo-changer#1](https://github.com/velochy/audio-tempo-changer.js/issues/1).
 
 ## Rebuilding pre-packed AudioFeeder.js
 
