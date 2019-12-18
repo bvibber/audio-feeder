@@ -33,7 +33,7 @@ FLEXSDK_URL:=$(FLEXSDK_BASE)/$(FLEXSDK_ARCHIVE)
 
 PLAYERGLOBAL_BASE:=$(FLEXSDK_DIR)/frameworks/libs/player
 PLAYERGLOBAL_DIR:=$(PLAYERGLOBAL_BASE)/27.0
-PLAYERGLOBAL_URL:=http://fpdownload.macromedia.com/get/flashplayer/updaters/27/playerglobal27_0.swc
+PLAYERGLOBAL_URL:=https://fpdownload.macromedia.com/get/flashplayer/installers/archive/playerglobal/playerglobal27_0.swc
 
 FLEXSDK_BASE_DEP:=$(FLEXSDK_DIR)/flex-sdk-description.xml
 FLEXSDK_LIBS_DEP:=$(FLEXSDK_DIR)/frameworks/libs/osmf.swc
