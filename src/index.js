@@ -2,7 +2,6 @@
 
 	var BufferQueue = require('./buffer-queue.js'),
 		WebAudioBackend = require('./web-audio-backend.js'),
-		FlashBackend = require('./flash-backend.js'),
 		AudioTempoChanger = require('audio-tempo-changer.js');
 
 
@@ -25,8 +24,7 @@
 	 * Object dictionary format used to pass options into {@link AudioFeeder} and its backends.
 	 *
 	 * @typedef {Object} AudioFeederOptions
-	 * @property {string} base - (optional) base URL to find additional resources in,
-	 *                           such as the Flash audio output shim
+	 * @property {string} base - (optional) base URL to find additional resources in
 	 * @property {AudioContext} audioContext - (optional) Web Audio API AudioContext
 	 *                          instance to use inplace of creating a default one
 	 */
@@ -302,8 +300,6 @@
 			this._backend = this._options.backendFactory(numChannels, sampleRate, this._options);
 		} else if (WebAudioBackend.isSupported()) {
 			this._backend = new WebAudioBackend(numChannels, sampleRate, this._options);
-		} else if (FlashBackend.isSupported()) {
-			this._backend = new FlashBackend(numChannels, sampleRate, this._options);
 		} else {
 			throw 'No supported backend';
 		}
@@ -416,7 +412,7 @@
 			for (var channel = 0; channel < targetChannels; channel++) {
 				var inputChannel = channel;
 				if (channel >= channels) {
-					// Flash forces output to stereo; if input is mono, dupe the first channel
+					// If input is mono, dupe the first channel
 					inputChannel = 0;
 				}
 				var input = sampleData[inputChannel],
@@ -476,10 +472,6 @@
 	/**
 	 * Checks if audio system is ready and calls the callback when ready
 	 * to begin playback.
-	 *
-	 * This will wait for the Flash shim to load on IE 10/11; waiting
-	 * is not required when using native Web Audio but you should use
-	 * this callback to support older browsers.
 	 *
 	 * @param {function} callback - called when ready
 	 */
@@ -570,7 +562,7 @@
 	 * @returns {boolean} - true if Web Audio API is available
 	 */
 	AudioFeeder.isSupported = function() {
-		return !!Float32Array && (WebAudioBackend.isSupported() || FlashBackend.isSupported());
+		return !!Float32Array && WebAudioBackend.isSupported();
 	};
 
 	/**

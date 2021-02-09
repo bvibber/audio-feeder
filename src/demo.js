@@ -4,7 +4,7 @@ module.exports = function demo() {
   // including it locally via webpack.
   /* global AudioFeeder */
 
-  var demoHtml = require('file?name=[name].[ext]!../assets/demo.html');
+  var demoHtml = require('file-loader?name=[name].[ext]!../assets/demo.html');
 
   var start = document.getElementById('start'),
     stop = document.getElementById('stop'),

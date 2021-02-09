@@ -2,18 +2,18 @@ audio-feeder
 ============
 
 The AudioFeeder class abstracts a buffered output pipe for uncompressed PCM
-audio in the browser, supporting both the standard W3C Web Audio API and a
-Flash-based fallback for IE 10/11.
+audio in the browser, supporting the standard W3C Web Audio API.
 
 AudioFeeder was written for the [ogv.js in-browser Ogg/WebM media player](https://github.com/brion/ogv.js),
 and is suitable for use in custom audio and video playback.
 
 ## Copyright and license
 
-* main AudioFeeder & Web Audio code path under MIT license, (c) 2013-2019 Brion Vibber
-* dynamicaudio.as and some Flash-related bits are based on code under BSD license, (c) 2010 Ben Firshman
+* main AudioFeeder & Web Audio code path under MIT license, (c) 2013-2021 Brion Vibber
 
 ## Updates
+* 0.5.0 - 2021-02-08
+    * Removed now non-functional Flash-based IE 10/11 support
 * 0.4.22 - 2019-06-05
     * Allow passing a custom backend in for testing and advanced usage via `options.backendFactory`.
 * 0.4.21 - 2019-05-28
@@ -106,10 +106,6 @@ and in your using code, set up the class like so:
 var AudioFeeder = require('audio-feeder');
 ```
 
-You will need to ensure that dynamicaudio.swf is included along with your
-bundled JS/HTML/etc output to support IE 10/11, and may need to manually set
-the base path in the options to the AudioFeeder constructor.
-
 ## Including AudioFeeder manually in a project
 
 Grab AudioFeeder.js or AudioFeeder.min.js (minified) from the ZIP download or
@@ -121,10 +117,7 @@ Include either as a module (CommonJS or AMD) or a standalone script.
 
 ```js
 // Create a feeder object
-var feeder = new AudioFeeder({
-  // Supply the path to dynamicaudio.swf for IE 10/11 compatibility
-  base: "/path/to/resources"
-});
+var feeder = new AudioFeeder();
 
 // Set up 2-channel stereo, 48 kHz sampling rate
 feeder.init(2, 48000);
@@ -175,9 +168,6 @@ See also the included demo.html file for a live sample web page.
 WebAudio-specific:
 * `audioContext`: an `AudioContext` object to be use instead of creating a new one
 * `output`: an `AudioNode` object to attach output to instead of the default
-
-Flash-specific:
-* `base`: base path containing `dynamicaudio.swf` for IE 10/11 Flash fallback
 
 General:
 * `backendFactory`: a function to call to provide a custom backend, for testing or advanced usage. Should take params `numChannels`, `sampleRate`, and `options` and return an object conforming to the internal backend class protocol. This is not considered a stable API at this time.
@@ -263,8 +253,8 @@ on the main thread if you process a lot of data on the main thread in one
 function call.
 
 Performing other slow tasks on the foreground thread may also prevent the
-Web Audio API or Flash callbacks from being called in a timely fashion,
-resulting in audio underruns even if lots of data has been buffered up.
+Web Audio API callbacks from being called in a timely fashion, resulting in
+audio underruns even if lots of data has been buffered up.
 
 ## Events
 
@@ -289,15 +279,9 @@ Todo:
 
 ## Flash and Internet Explorer 10/11
 
-Internet Explorer 10/11 do not support Web Audio but do bundle the Flash
-player plugin on Windows 8/8.1. This is automatically used if detected
-available.
-
-Beware that the dynamicaudio.swf file must be made available for the Flash
-fallback to work!
-
-Flash output is resampled to 2-channel 44.1 kHz, which is the only supported
-output format for dynamically generated audio in Flash.
+An earlier version of AudioFeeder supported a Flash backend for supporting
+Internet Explorer 10/11. This is no longer possible since the Flash plugin
+was disabled by Adobe in 2021.
 
 ## Rate control
 
@@ -326,39 +310,4 @@ npx grunt
 ```
 
 This will produce a 'dist' subdirectory containing a ready to use
-AudioFeeder.js, AudioFeeder.min.js, and dynamicaudio.swf, as well as
-a demo.html example page.
-
-
-## Rebuilding Flash shim
-
-The Flash shim can be rebuilt from source using the Apache Flex SDK.
-The Makefile in this project fetches a local copy of the SDK, which
-is not conveniently packaged.
-
-Building the Flash shim is known to work on Mac OS X and Linux, or
-on Windows 10 with Cygwin shell plus native Java/Ant.
-
-Build prerequisites:
-
-* bash
-* make
-* java
-* ant
-* curl
-
-```bash
-# Rebuild dynamicaudio.swf, installing Flex SDK if necessary
-make swf
-```
-
-Be warned that downloading libraries for the Apache Flex SDK may prompt
-you for permission at your terminal!
-
-```bash
-# To remove just the dynamicaudio.swf
-make clean
-
-# To remove the Flex SDK
-make distclean
-```
+AudioFeeder.js, and AudioFeeder.min.js as well as a demo.html example page.
